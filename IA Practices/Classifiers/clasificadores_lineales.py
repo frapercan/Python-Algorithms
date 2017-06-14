@@ -8,6 +8,7 @@ import numpy as np
 import random as rd
 import votos as votos
 import ClasificadoresUtils as utils
+from pylab import rand,plot,show,norm
 # --------------------------------------------------------------------------
 # Autor del trabajo:
 #
@@ -217,24 +218,19 @@ class Clasificador_Perceptron(Clasificador):
     def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
             pesos_iniciales=None,
             rate_decay=False):
-        entrenamiento = entr
-        clases_entrenamiento = clas_entr
-        rate_0 = rate
-        
         if pesos_iniciales == None:
-            pesos = utils.hiperPlano_aleatorio(len(entr[0]))
+            pesos = utils.hiperPlano_aleatorio(len(entr[0])+1)
+            print(pesos)
         else:
             pesos = pesos_iniciales
         n = 1
         while n < n_epochs:
             if(rate_decay):
-                rate_n= rate_0 + (2/n**(1.5)) 
-                pesos = utils.EntrenamientoDePerceptron(pesos,entrenamiento,clases_entrenamiento,rate_n)
+                rate_n= rate + (2/n**(1.5)) 
+                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate_n)
             else:
-                pesos = utils.EntrenamientoDePerceptron(pesos,entrenamiento,clas_entr,rate)
+                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate)
             n = n+1
-            
-        entrenamiento,clases_entrenamiento = utils.shuffling_xy(entrenamiento,clases_entrenamiento)    
         self.pesos = pesos
                     
     def clasifica(self,ej):
@@ -320,7 +316,7 @@ class Clasificador_Perceptron(Clasificador):
 # ------------------------------------------------------------
 
 # Generamos un conjunto de datos linealmente separables, 
-X1,Y1=genera_conjunto_de_datos_l_s(4,8,400)
+X1,Y1=genera_conjunto_de_datos_l_s(4,5,400)
 
 # Lo partimos en dos trozos:
 X1e,Y1e=X1[:300],Y1[:300]

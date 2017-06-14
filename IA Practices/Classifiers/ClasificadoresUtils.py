@@ -10,7 +10,7 @@ def umbral(x):
     return 1 if x > 0 else 0
 
 def hiperPlano_aleatorio(dim):
-    return np.random.sample(dim)
+    return np.random.randint(-1,2,dim)
 
 def normaliza(vector):
     media = np.mean(vector)
@@ -18,16 +18,29 @@ def normaliza(vector):
     return [(componente-media)/desviacion_tipica for componente in vector]
     
 def EntrenamientoDePerceptron(pesos,entr,clas_entr,rate):
+    print('pesos',pesos)
     W = pesos
-    w0 = W[0]
-    x0 = -1
-    np.delete(W,0)
-    for (vectorx,y) in zip(entr,clas_entr):
-        o = umbral( (w0*x0) + np.dot(pesos,vectorx) )
-        w0 = w0 + rate*(y-o)*x0
-        for w,x,n in zip(pesos,vectorx,range(len(pesos))):
+    print('W',W)
+    dim = len(pesos)
+    n_data = len(entr)
+    print('entr',entr)
+    print('class_entr',clas_entr)
+    
+    
+    
+    shuffled_entr,shuffled_clas_entr = shuffling_xy(entr,clas_entr)
+    print('shuffled_entr',shuffled_entr)
+    print('shuffled_class',shuffled_clas_entr)
+    negative_one_row = np.full((n_data,1),-1)
+    print(negative_one_row)
+    shuffled_x0_entr =np.column_stack((negative_one_row,shuffled_entr))
+    print(shuffled_x0_entr)
+    
+    for (vectorx,y) in zip(shuffled_x0_entr,shuffled_clas_entr):
+        o = umbral( np.dot(pesos,vectorx) )
+        for w,x,n in zip(W,vectorx,range(dim)):
             W[n] = w + rate*(y-o)*x
-    return pesos
+    return W
 
 def shuffling_xy(x,y):
     tam = len(x)
