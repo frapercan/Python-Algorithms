@@ -6,9 +6,8 @@
 # ===========================================================
 import numpy as np
 import random as rd
-import votos as votos
 import ClasificadoresUtils as utils
-from pylab import rand,plot,show,norm
+
 # --------------------------------------------------------------------------
 # Autor del trabajo:
 #
@@ -214,29 +213,8 @@ class Clasificador():
 #    usar la biblioteca numpy para calcular la media, la desviación típica, y
 #    en general para cualquier cálculo matemático.
 
-class Clasificador_Perceptron(Clasificador):
-    def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
-            pesos_iniciales=None,
-            rate_decay=False):
-        if pesos_iniciales == None:
-            pesos = utils.hiperPlano_aleatorio(len(entr[0])+1)
-            print(pesos)
-        else:
-            pesos = pesos_iniciales
-        n = 1
-        while n < n_epochs:
-            if(rate_decay):
-                rate_n= rate + (2/n**(1.5)) 
-                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate_n)
-            else:
-                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate)
-            n = n+1
-        self.pesos = pesos
-                    
-    def clasifica(self,ej):
-        return utils.umbral(np.dot(self.pesos,ej))
-                    
-        
+
+
 
 # * Método entrena:
 # -----------------
@@ -278,7 +256,31 @@ class Clasificador_Perceptron(Clasificador):
 #  aleatorio distinto cada vez.  
 
     
+class Clasificador_Perceptron(Clasificador):
+    def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
+            pesos_iniciales=None,
+            rate_decay=False):
+        if pesos_iniciales == None:
+            #len +1 debido a que necesitamos una entrada ficticia x0 = -1
+            pesos = utils.hiperPlano_aleatorio(len(entr[0])+1)
+        else:
+            pesos = pesos_iniciales
+        
+        n = 1
+        while n < n_epochs:
+            if(rate_decay):
+                rate_n= rate + (2/n**(1.5))
+                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate_n)
+            else:
+                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate)
+            n = n+1
+        self.pesos = pesos
+                   
+    def clasifica(self,ej):
+        ## w0 es un peso ficticio asociado a la entrada ficticia del algoritmo de entrenamiento. 
+        return utils.umbral(np.dot(self.pesos[1:],ej))
                     
+                  
         
         
         
@@ -316,43 +318,43 @@ class Clasificador_Perceptron(Clasificador):
 # ------------------------------------------------------------
 
 # Generamos un conjunto de datos linealmente separables, 
-X1,Y1=genera_conjunto_de_datos_l_s(4,5,400)
+#X1,Y1=genera_conjunto_de_datos_l_s(4,4,400)
 
 # Lo partimos en dos trozos:
-X1e,Y1e=X1[:300],Y1[:300]
+#X1e,Y1e=X1[:300],Y1[:300]
 
-X1t,Y1t=X1[300:],Y1[300:]
+#X1t,Y1t=X1[300:],Y1[300:]
 
 # Creamos el clasificador (perceptrón umbral en este caso): 
-clas_pb1=Clasificador_Perceptron([0,1])
+#clas_pb1=Clasificador_Perceptron([0,1])
 
 # Lo entrenamos con elprimero de los conjuntos de datos:
-#clas_pb1.entrena(X1e,Y1e,100,rate_decay=False,rate=0.001)
+#clas_pb1.entrena(X1e,Y1e,100,rate_decay=True,rate=0.001)
 
 # Clasificamos un ejemplo del otro conjunto, y lo comparamos con su clase real:
 #clas_pb1.clasifica(X1t[0]),Y1t[0]
 # Out[6]: (1, 1)
 
 # Comprobamos el porcentaje de aciertos sobre todos los ejemplos de X2t
-#sum(clas_pb1.clasifica(x) == y for x,y in zip(X1t,Y1t))/len(Y1t)
+#(sum(clas_pb1.clasifica(x) == y for x,y in zip(X1t,Y1t))/len(Y1t))
 # Out[7]: 1.0
 
 # Repetimos el experimento, pero ahora con un conjunto de datos que no es
 # linealmente separable: 
-# In [8]: X2,Y2=genera_conjunto_de_datos_n_l_s(4,8,400,0.1)
+#X2,Y2=genera_conjunto_de_datos_n_l_s(4,8,400,0.1)
 
-# In [8]: X2e,Y2e=X2[:300],Y2[:300]
+#X2e,Y2e=X2[:300],Y2[:300]
 
-# In [9]: X2t,Y2t=X2[300:],Y2[300:]
+#X2t,Y2t=X2[300:],Y2[300:]
 
-# In [10]: clas_pb2=Clasificador_Perceptron([0,1])
+#clas_pb2=Clasificador_Perceptron([0,1])
 
-# In [11]: clas_pb2.entrena(X2e,Y2e,900,rate_decay=True,rate=0.001)
+#clas_pb2.entrena(X2e,Y2e,200,rate_decay=True,rate=0.001)
 
 # In [12]: clas_pb2.clasifica(X2t[0]),Y2t[0]
 # Out[12]: (1, 0)
 
-# In [13]: sum(clas_pb2.clasifica(x) == y for x,y in zip(X2t,Y2t))/len(Y2t)
+#print(sum(clas_pb2.clasifica(x) == y for x,y in zip(X2t,Y2t))/len(Y2t))
 # Out[13]: 0.82
 # ----------------------------------------------------------------
 

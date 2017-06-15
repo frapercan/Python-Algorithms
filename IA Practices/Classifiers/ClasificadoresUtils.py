@@ -18,33 +18,24 @@ def normaliza(vector):
     return [(componente-media)/desviacion_tipica for componente in vector]
     
 def EntrenamientoDePerceptron(pesos,entr,clas_entr,rate):
-    print('pesos',pesos)
     W = pesos
-    print('W',W)
     dim = len(pesos)
-    n_data = len(entr)
-    print('entr',entr)
-    print('class_entr',clas_entr)
+    n_data = int(len(entr))
+    shuffled_entr,shuffled_clas_entr = shuffle_xy(entr,clas_entr)
     
-    
-    
-    shuffled_entr,shuffled_clas_entr = shuffling_xy(entr,clas_entr)
-    print('shuffled_entr',shuffled_entr)
-    print('shuffled_class',shuffled_clas_entr)
-    negative_one_row = np.full((n_data,1),-1)
-    print(negative_one_row)
+    negative_one_row = np.full((n_data,1),-1.)
     shuffled_x0_entr =np.column_stack((negative_one_row,shuffled_entr))
-    print(shuffled_x0_entr)
+
     
     for (vectorx,y) in zip(shuffled_x0_entr,shuffled_clas_entr):
-        o = umbral( np.dot(pesos,vectorx) )
+        o = umbral( np.dot(W,vectorx) )
         for w,x,n in zip(W,vectorx,range(dim)):
             W[n] = w + rate*(y-o)*x
     return W
 
-def shuffling_xy(x,y):
-    tam = len(x)
+def shuffle_xy(x,y):
+    dim = len(x[0])
     xy = np.column_stack( (x,y) )
     np.random.shuffle(xy)
-    return np.hsplit(xy, np.array([tam-1]))
+    return np.hsplit(xy, np.array([dim]))
     
