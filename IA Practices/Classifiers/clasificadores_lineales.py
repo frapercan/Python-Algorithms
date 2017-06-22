@@ -119,6 +119,11 @@ def genera_conjunto_de_datos_n_l_s(rango,dim,n_datos,prop_n_l_s=0.5):
     
 
 
+class ClasificadorNoEntrenado(Exception): 
+    def __init__(self,pesos):
+        self.pesos = pesos
+
+        
 # -----------------------------------
 # I.2. Clases y mรฉtodos a implementar
 # -----------------------------------
@@ -132,6 +137,7 @@ class Clasificador():
         self.clases = clases
         self.normalizacion = normalizacion
         self.pesos = []
+        self.dim = 0
         
     def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
             pesos_iniciales=None,
@@ -139,10 +145,32 @@ class Clasificador():
         pass
     
     def clasifica_prob(self,ej):
-        pass
+        try:
+            if self.pesos.itemsize == 0:
+                raise ClasificadorNoEntrenado(self.pesos)
+                
+        except ClasificadorNoEntrenado as c_n:  # excepción de usuario   
+            print('Error por clasificador no entrenado')
+            
+        else:
+            if self.normalizacion == True:
+                return utils.sigmoide(np.dot(self.pesos[1:],utils.normaliza(ej))+self.pesos[0])
+            else:
+                return utils.sigmoide(np.dot(self.pesos[1:],ej)+self.pesos[0])
     
     def clasifica(self,ej):
-        pass
+        try:
+            if self.pesos.itemsize == 0:
+                raise ClasificadorNoEntrenado(self.pesos)
+                
+        except ClasificadorNoEntrenado as c_n:  # excepción de usuario   
+            print('Error por clasificador no entrenado')
+            
+        else:
+            if self.normalizacion == True:
+                return utils.umbral(np.dot(self.pesos[1:],utils.normaliza(ej))+self.pesos[0])
+            else:
+                return utils.umbral(np.dot(self.pesos[1:],ej)+self.pesos[0]) 
 # class NOMBRE_DEL_CLASIFICADOR():
 
 #     def __init__(self,clases,normalizacion=False):
@@ -218,93 +246,191 @@ class Clasificador_Perceptron(Clasificador):
     def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
             pesos_iniciales=None,
             rate_decay=False):
+        self.dim = len(entr[0])
+        entradas = []
+        errores=[]
+        if self.normalizacion == True:
+            for vectorx in entr:
+                entradas.append(utils.normaliza(vectorx))
+        else:
+            entradas = entr
         if pesos_iniciales == None:
             #len +1 debido a que necesitamos una entrada ficticia x0 = -1
-            pesos = utils.hiperPlano_aleatorio(len(entr[0])+1),
+            self.pesos = utils.hiperPlano_aleatorio(self.dim+1)
         else:
-            pesos = pesos_iniciales
+            self.pesos = pesos_iniciales
         
         n = 1
+        rate_n = rate
         while n < n_epochs:
             if(rate_decay):
                 rate_n= rate + (2/n**(1.5))
-                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate_n)
-            else:
-                pesos = utils.EntrenamientoDePerceptron(pesos,entr,clas_entr,rate)
+            self.pesos = utils.EntrenamientoDePerceptron(self.pesos,np.array(entradas),clas_entr,rate_n)
             n = n+1
-        self.pesos = pesos
+            #errores.append((sum(self.clasifica(x) == y for x,y in zip(entr,clas_entr))/len(clas_entr)))
+            errores.append(utils.L2(self.pesos,entr,clas_entr))
+        plt.plot(range(1,len(errores)+1),errores,marker='o')
+        plt.xlabel('Epochs')
+        #plt.ylabel('Porcentaje de errores')
+        plt.ylabel('Error cuadratico L2')
+        plt.show()
+        
                    
-    def clasifica(self,ej):
-        ## w0 es un peso ficticio asociado a la entrada ficticia del algoritmo de entrenamiento. 
-        return utils.umbral(np.dot(self.pesos[1:],ej))
+
+        
                     
-class Clasificador_RL_L2_Estocastico(Clasificador):
+class Clasificador_RL_L2_St(Clasificador):
     def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
             pesos_iniciales=None,
             rate_decay=False):
-        if pesos_iniciales == None:
-            pesos = utils.hiperPlano_aleatorio(len(entr[0]))
+        self.dim = len(entr[0])
+        entradas = []
+        errores=[]
+        if self.normalizacion == True:
+            for vectorx in entr:
+                entradas.append(utils.normaliza(vectorx))
         else:
-            pesos = pesos_iniciales            
-        n = 1           
+            entradas = entr
+        if pesos_iniciales == None:
+            self.pesos = utils.hiperPlano_aleatorio(self.dim+1)
+        else:
+            self.pesos = pesos_iniciales
+        
+        n = 1  
+        rate_n = rate
         while n < n_epochs:
             if( rate_decay ):
                 rate_n= rate + (2/n**(1.5))         
-                pesos = utils.ReglaDelta(pesos,entr,clas_entr,rate_n)
-            else:
-                pesos = utils.ReglaDelta(pesos,entr,clas_entr,rate)
+            self.pesos = utils.ReglaDelta(self.pesos,entradas,clas_entr,rate_n)
             n = n+1
-        self.pesos = pesos
+            ##errores.append((sum(self.clasifica(x) == y for x,y in zip(entr,clas_entr))/len(clas_entr)))
+            errores.append(utils.L2(self.pesos,entr,clas_entr)/len(clas_entr))
+        plt.plot(range(1,len(errores)+1),errores,marker='o')
+        plt.xlabel('Epochs')
+        #plt.ylabel('Porcentaje de errores')
+        plt.ylabel('Error cuadratico medio')
+        plt.show()
+        
+        
     
-    def clasifica(self,ej):
-        return utils.umbral(np.dot(self.pesos,ej))
+
     
 class Clasificador_RL_L2_Batch(Clasificador):
     def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
             pesos_iniciales=None,
             rate_decay=False):
-        if pesos_iniciales == None:
-            pesos = utils.hiperPlano_aleatorio(len(entr[0]))
+        self.dim = len(entr[0])
+        entradas = []
+        errores=[]
+        if self.normalizacion == True:
+            for vectorx in entr:
+                entradas.append(utils.normaliza(vectorx))
         else:
-            pesos = pesos_iniciales            
-        n = 1           
+            entradas = entr
+        if pesos_iniciales == None:
+            self.pesos = utils.hiperPlano_aleatorio(self.dim+1)
+        else:
+            self.pesos = pesos_iniciales
+        
+        n = 1  
+        rate_n = rate         
         while n < n_epochs:
             if( rate_decay ):
                 rate_n= rate + (2/n**(1.5))         
-                pesos = utils.Descenso_Gradiente(pesos,entr,clas_entr,rate_n,tipo="Minimizando_L2")
+                self.pesos = utils.Descenso_Gradiente(self.pesos,entradas,clas_entr,rate_n,tipo="Minimizando_L2")
             else:
-                pesos = utils.Descenso_Gradiente(pesos,entr,tipo="Minimizando_L2")
+                self.pesos = utils.Descenso_Gradiente(self.pesos,entradas,clas_entr, rate, tipo="Minimizando_L2")
             n = n+1
-        self.pesos = pesos
+            ##errores.append((sum(self.clasifica(x) == y for x,y in zip(entr,clas_entr))/len(clas_entr)))
+            errores.append(utils.L2(self.pesos,entr,clas_entr)/len(clas_entr))
+        plt.plot(range(1,len(errores)+1),errores,marker='o')
+        plt.xlabel('Epochs')
+        #plt.ylabel('Porcentaje de errores')
+        plt.ylabel('Error cuadratico medio')
+        plt.show()
+        
     
-    def clasifica(self,ej):
-        return utils.umbral(np.dot(self.pesos,ej))    
+   
     
 class Clasificador_RL_ML_Batch(Clasificador):
+    
     def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
             pesos_iniciales=None,
             rate_decay=False):
-        if pesos_iniciales == None:
-            pesos = utils.hiperPlano_aleatorio(len(entr[0]))
+        self.dim = len(entr[0])
+        entradas = []
+        errores=[]
+        if self.normalizacion == True:
+            for vectorx in entr:
+                entradas.append(utils.normaliza(vectorx))
         else:
-            pesos = pesos_iniciales            
-        n = 1           
+            entradas = entr
+        if pesos_iniciales == None:
+            self.pesos = utils.hiperPlano_aleatorio(self.dim+1)
+        else:
+            self.pesos = pesos_iniciales
+        
+        n = 1  
+        rate_n = rate    
         while n < n_epochs:
             if( rate_decay ):
                 rate_n= rate + (2/n**(1.5))         
-                pesos = utils.Descenso_Gradiente_ML(pesos,entr,clas_entr,rate_n,tipo="Maximizando_Verosimilitud")
+                self.pesos = utils.Descenso_Gradiente(self.pesos,np.array(entradas),clas_entr,rate_n,tipo="Maximizar_Verosimilitud")
             else:
-                pesos = utils.Descenso_Gradiente_ML(pesos,entr,clas_entr,rate,tipo="Maximizando_Verosimilitud")
+                self.pesos = utils.Descenso_Gradiente(self.pesos,np.array(entradas),clas_entr,rate,tipo="Maximizar_Verosimilitud")
             n = n+1
-        self.pesos = pesos
+            ##errores.append((sum(self.clasifica(x) == y for x,y in zip(entr,clas_entr))/len(clas_entr)))
+            errores.append(np.abs(utils.LogVerosimilitud(self.pesos,entr,clas_entr)))
+        plt.plot(range(1,len(errores)+1),errores,marker='o')
+        plt.xlabel('Epochs')
+        #plt.ylabel('Porcentaje de errores')
+        plt.ylabel('log Verosimilitud ')
+        plt.show()
     
-    def clasifica(self,ej):
-        return utils.umbral(np.dot(self.pesos,ej))   
 
+    
+  
 
+class Clasificador_RL_ML_St(Clasificador):
+    def entrena(self,entr,clas_entr,n_epochs,rate=0.1,
+            pesos_iniciales=None,
+            rate_decay=False):
+        self.dim = len(entr[0])
+        entradas = []
+        errores=[]
+        if self.normalizacion == True:
+            for vectorx in entr:
+                entradas.append(utils.normaliza(vectorx))
+        else:
+            entradas = entr
+        if pesos_iniciales == None:
+            self.pesos = utils.hiperPlano_aleatorio(self.dim+1)
+        else:
+            self.pesos = pesos_iniciales
+        
+        n = 1  
+        rate_n = rate
+        while n < n_epochs:
+           if rate_decay:
+               rate_n= rate + (2/n**(1.5))         
+           self.pesos = utils.maximizandoVerosimilitud(self.pesos,entradas,clas_entr,rate_n)
+           #porcentaje de errores por epoch
+           #errores.append((sum(self.clasifica(x) == y for x,y in zip(entr,clas_entr))/len(clas_entr)))
+           errores.append(np.abs(utils.LogVerosimilitud(self.pesos,entr,clas_entr)))
+           n = n+1
+       
+        plt.plot(range(1,len(errores)+1),errores,marker='o')
+        plt.xlabel('Epochs')
+        #plt.ylabel('Porcentaje de errores')
+        plt.ylabel('log-Verosimilitud')
+        plt.show()
+        
+        
+        
+    
 
-
-
+                
+   
 
 
 # * Mรฉtodo entrena:
@@ -387,21 +513,21 @@ class Clasificador_RL_ML_Batch(Clasificador):
 # Generamos un conjunto de datos linealmente separables, 
 X1,Y1=genera_conjunto_de_datos_l_s(4,8,400)
 
-# Lo partimos en dos trozos:
+# Lo partimos en dos trozos:n
 X1e,Y1e=X1[:300],Y1[:300]
 
 X1t,Y1t=X1[300:],Y1[300:]
 
 # Creamos el clasificador (perceptrรณn umbral en este caso): 
 #clas_pb1=Clasificador_Perceptron([0,1])
-clas_pb1=Clasificador_RL_L2_Batch([0,1])
+clas_pb1=Clasificador_RL_ML_St([0,1],normalizacion = False)
 
 
 # Lo entrenamos con elprimero de los conjuntos de datos:
-clas_pb1.entrena(X1e,Y1e,100,rate_decay=False,rate=0.001)
+clas_pb1.entrena(X1e,Y1e,50,rate_decay=False,rate=0.001)
 
 # Clasificamos un ejemplo del otro conjunto, y lo comparamos con su clase real:
-#clas_pb1.clasifica(X1t[0]),Y1t[0]
+#clas_pb1.clasifica_prob(X1t[0]),Y1t[0]
 # Out[6]: (1, 1)
 
 # Comprobamos el porcentaje de aciertos sobre todos los ejemplos de X2t
@@ -544,7 +670,45 @@ import matplotlib.pyplot as plt
 
 #     def clasifica(self,ej):
 
-#        .....            
+#        .....       
+class Clasificador_RL_OvR():
+   
+   def __init__(self,class_clasif,clases):
+       self.class_clasif = class_clasif
+       self.clases = clases
+       self.pesos = []
+       
+   def entrena(self,entr,clas_entr,n_epochs,rate=0.1,rate_decay=False):
+       W = []
+       pesos=None
+       #Para hacerla general hacemos un recorrido por las distintas clasificaciones
+       for clase in self.clases:
+           #hacemos otro recorrido para por el target (Y)
+           clasificacion = utils.Transforma_Binario(clas_entr,clase)
+           #Ahora tendriamos que entrenar nuestro clasificador con uno de los clasificadores anteriores
+           self.class_clasif.entrena(entr, clasificacion, n_epochs,rate,pesos,rate_decay)
+           W.append(self.class_clasif.pesos)
+           self.pesos = W 
+
+   def clasifica(self,ej):
+       prob=[]
+       for w in self.pesos:
+           if self.class_clasif.normalizacion:
+               prob.append(utils.sigmoide(np.dot(w[1:],utils.normaliza(ej))+w[0]))
+           else:
+               prob.append(utils.sigmoide(np.dot(w[1:],ej)+w[0]))
+       return self.clases[np.argmax(prob)]
+       
+       
+       
+       
+       
+   
+   
+            
+        
+
+                
 
 #  Excepto "class_clasif", los restantes parรกmetros de los mรฉtodos significan
 #  lo mismo que en el apartado anterior, excepto que ahora "clases" puede ser
@@ -555,21 +719,21 @@ import matplotlib.pyplot as plt
 #  Un ejemplo de sesiรณn, con el problema del iris:
 
 # ---------------------------------------------------------------
-# In [28]: from iris import *
+from iris import *
 
-# In [29]: iris_clases=["Iris-setosa","Iris-virginica","Iris-versicolor"]
+#iris_clases=["Iris-setosa","Iris-virginica","Iris-versicolor"]
 
 # Creamos el clasificador, a partir de RL binaria estocรกstico:
-# In [30]: clas_rlml1=Clasificador_RL_OvR(Clasificador_RL_ML_St,iris_clases)
+clas_rlml1=Clasificador_RL_OvR(clas_pb1,iris_clases)
 
 # Lo entrenamos: 
-# In [32]: clas_rlml1.entrena(iris_entr,iris_entr_clas,100,rate_decay=True,rate=0.01)
 
+clas_rlml1.entrena(iris_entr,iris_entr_clas,500,rate_decay=False,rate=0.001)
 # Clasificamos un par de ejemplos, comparรกndolo con su clase real:
-# In [33]: clas_rlml1.clasifica(iris_entr[25]),iris_entr_clas[25]
+print(clas_rlml1.clasifica(iris_entr[25]),iris_entr_clas[25])
 # Out[33]: ('Iris-setosa', 'Iris-setosa')
 
-# In [34]: clas_rlml1.clasifica(iris_entr[78]),iris_entr_clas[78]
+print(clas_rlml1.clasifica(iris_entr[75]),iris_entr_clas[75])
 # Out[34]: ('Iris-versicolor', 'Iris-versicolor')
 # ----------------------------------------------------------------
 
